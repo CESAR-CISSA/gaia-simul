@@ -20,9 +20,7 @@ class MQTTStream(StreamSchema):
         """
         Adiciona um novo atributo MQTT com validação de tipo.
         """
-        if not attr_name.startswith("mqtt_"):
-            raise ValueError("O nome do atributo deve começar com 'mqtt_'")
-
+      
         attr_type = attr_type.lower()
         if attr_type not in SiddhiType._value2member_map_:
             raise ValueError(f"Tipo '{attr_type}' inválido. Tipos válidos: {[t.value for t in SiddhiType]}")

@@ -1,7 +1,6 @@
 import csv
 from PySiddhi.DataTypes.LongType import LongType
 import asyncio
-# from typing import Dict
 
 from mqtt_stream import MQTTStream
 

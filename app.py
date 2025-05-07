@@ -1,5 +1,7 @@
 from PySiddhi.core.SiddhiManager import SiddhiManager
 from mqtt_stream import MQTTStream, SiddhiType
+from net_helper import NetworkInterfaceManager
+from scapy_sniffer import MQTTSniffer
 from query_callback import QueryCallbackImpl
 from siddhi_query import SiddhiQuery
 from sender import EventSender
@@ -10,6 +12,7 @@ async def main():
     # Instancia o stream MQTT
     mqtt_stream = MQTTStream("cseEventStream")
     mqtt_stream.add_mqtt_attribute("srcAddr", SiddhiType.STRING)
+    mqtt_stream.add_mqtt_attribute("dstAddr", SiddhiType.STRING)
     mqtt_stream.add_mqtt_attribute("mqtt_messagetype", SiddhiType.INT)
     mqtt_stream.add_mqtt_attribute("mqtt_messagelength", SiddhiType.LONG)
     mqtt_stream.add_mqtt_attribute("mqtt_flag_qos", SiddhiType.INT)
@@ -19,13 +22,10 @@ async def main():
         name="query1",
         query_string="@info(name = 'query1') " +
                      "from cseEventStream[mqtt_messagetype == 2]#window.time(0.5 sec) " +
-                     "select srcAddr, mqtt_messagetype, mqtt_messagelength, mqtt_flag_qos, count() as msgCount " +
+                     "select srcAddr, dstAddr, mqtt_messagetype, mqtt_messagelength, mqtt_flag_qos, count() as msgCount " +
                      "group by srcAddr " +
                      "having msgCount >= 50 " +
                      "insert into outputStream;"
-        # query_string="@info(name = 'query1') " +
-        # "from cseEventStream#window.time(0.5 sec)" +
-        # "select mqtt_messagetype, mqtt_messagelength, mqtt_flag_qos insert into mqtt_BruteForce_OutputStream;"
     )
 
     siddhi_manager = SiddhiManager()
@@ -42,7 +42,12 @@ async def main():
     sender = EventSender(input_handler, mqtt_stream)
     siddhi_runtime.start()
 
+    manager = NetworkInterfaceManager()
+    selected_interface = manager.choose_interface_cli()
 
+
+    sniffer = MQTTSniffer(interface=selected_interface)
+    sniffer.start_sniffing(iface)
 
 
     await sender.send_event_from_csv("./data/eventos.csv") # when not containerized
