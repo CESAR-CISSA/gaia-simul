@@ -21,4 +21,4 @@ python-dateutil==2.9.0.post0
 PyX==0.16
 scapy==2.6.1
 six==1.17.0
-psutil
+psutil==7.0.0

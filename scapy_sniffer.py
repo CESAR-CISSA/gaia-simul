@@ -60,7 +60,7 @@ class MQTTSniffer:
             mqtt_type = packet[MQTT].type # Obtém o tipo do pacote MQTT                  
             
             # Ignora os pacotes sem length (tipos 2, 8, 9, 12, 13 e 14)
-            if mqtt_type not in [2,8,9,12,13,14]:
+            if mqtt_type not in [8,9,12,13,14]:
                 mqtt_length = packet[MQTT].length
                 mqtt_qos = packet[MQTT].QOS
 

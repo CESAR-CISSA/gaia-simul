@@ -23,10 +23,11 @@ async def main():
         name="query1",
         query_string="@info(name = 'query1') " +
                     #  "from (cseEventStream[mqtt_messagetype == 2])#window.time(0.5 sec) " +
-                     "from (cseEventStream[mqtt_messagetype == 3]) " +
+                    #  "from (cseEventStream[mqtt_messagetype == 2]) " +
+                     "from cseEventStream " +
                      "select sniff_ts, srcAddr, dstAddr, mqtt_messagetype, mqtt_messagelength, mqtt_flag_qos, count() as msgCount " +
-                     "group by srcAddr " +
-                     "having msgCount >= 10 " +
+                    #  "group by srcAddr " +
+                    #  "having msgCount >= 50 " +
                      "insert into outputStream;"
     )
 
