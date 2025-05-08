@@ -1,5 +1,6 @@
 from scapy.all import sniff, IP, TCP, Raw
 from scapy.contrib.mqtt import MQTT
+from sender import EventSender
 from datetime import datetime
 import logging
 
@@ -63,11 +64,15 @@ class MQTTSniffer:
                 mqtt_length = packet[MQTT].length
                 mqtt_qos = packet[MQTT].QOS
 
-                print(f"{tcp_time}\t {sipaddr}\t {dipaddr}\t {mqtt_type}\t {mqtt_length}\t {mqtt_qos}")
-                logging.info(f"{tcp_time}\t {sipaddr}\t {dipaddr}\t {mqtt_type}\t {mqtt_length}\t {mqtt_qos}")
+                event_data = [tcp_time, sipaddr, dipaddr, mqtt_type, mqtt_length, mqtt_qos]
+                self.siddhi_sender.send_event(event_data)
+
+                # print(f"{tcp_time}\t {sipaddr}\t {dipaddr}\t {mqtt_type}\t {mqtt_length}\t {mqtt_qos}")
+                # logging.info(f"{tcp_time}\t {sipaddr}\t {dipaddr}\t {mqtt_type}\t {mqtt_length}\t {mqtt_qos}")
     
 
-    def start_sniffing(self, iface):
+    def start_sniffing(self, iface, sender: EventSender):
+        self.siddhi_sender = sender
         print(f"Capturando pacotes da interface {iface} na porta 1883 e registrando em {self.log_file}...")
         try:
             sniff(iface=iface, filter="tcp and port 1883", prn=self.packet_callback)
