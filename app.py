@@ -21,18 +21,30 @@ async def main():
     # Define a query Siddhi
     query = SiddhiQuery(
         name="query1",
-        query_string="@info(name = 'query1') " +
-                    #  "from (cseEventStream[mqtt_messagetype == 2])#window.time(0.5 sec) " +
-                    #  "from (cseEventStream[mqtt_messagetype == 2]) " +
-                     "from cseEventStream " +
-                     "select sniff_ts, srcAddr, dstAddr, mqtt_messagetype, mqtt_messagelength, mqtt_flag_qos, count() as msgCount " +
-                    #  "group by srcAddr " +
-                    #  "having msgCount >= 50 " +
+        # query_string=""
+        #             "@info(name = 'query1') " +
+        #             #  "from (cseEventStream[mqtt_messagetype == 2])#window.time(0.5 sec) " +
+        #             #  "from (cseEventStream[mqtt_messagetype == 2]) " +
+        #              "from cseEventStream# " +
+        #              "select sniff_ts, srcAddr, dstAddr, mqtt_messagetype, mqtt_messagelength, mqtt_flag_qos, count() as msgCount " +
+        #             #  "group by srcAddr " +
+        #             #  "having msgCount >= 50 " +
+        #              "insert into outputStream;"
+        query_string="define window cseEventWindow (sniff_ts string, srcAddr string, dstAddr string, mqtt_messagetype int, mqtt_messagelength long, mqtt_flag_qos int ) time(500) output all events; " +
+                    "@info(name = 'query0') " +
+                    "from cseEventStream " +
+                    "insert into cseEventWindow; " +
+                    "@info(name = 'query1') " +
+                    "from cseEventWindow[mqtt_messagetype == 2]" + 
+                    "select sniff_ts, srcAddr, dstAddr, mqtt_messagetype, mqtt_messagelength, mqtt_flag_qos, count() as msgCount " +
+                     "group by srcAddr " +
+                     "having msgCount >= 50 " +
                      "insert into outputStream;"
     )
 
     siddhi_manager = SiddhiManager()
     siddhi_app = str(mqtt_stream) + " " + str(query)
+    print(siddhi_app)
     siddhi_runtime = siddhi_manager.createSiddhiAppRuntime(siddhi_app)
 
     # Define os nomes das colunas na ordem usada na stream
