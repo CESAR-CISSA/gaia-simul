@@ -62,9 +62,14 @@ async def main():
     manager = NetworkInterfaceManager()
     selected_interface = manager.choose_interface_cli()
 
+    
+    log_file = "captura_scapy.log"
+    iface = selected_interface
+    sport = 1883
+    dport = 1883
 
-    sniffer = MQTTSniffer(interface=selected_interface)
-    sniffer.start_sniffing(selected_interface, sender)
+    sniffer = MQTTSniffer(log_file, iface, sport, dport) 
+    sniffer.start_sniffing(sender)
 
 
     # await sender.send_event_from_csv("./data/eventos.csv") # when not containerized

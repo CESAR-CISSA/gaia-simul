@@ -1,6 +1,7 @@
 from scapy.all import sniff, IP, TCP, Raw
 from scapy.contrib.mqtt import MQTT
 from net_helper import NetworkInterfaceManager
+from sender import EventSender
 import numpy as np
 import logging
 import time
@@ -109,7 +110,8 @@ class MQTTSniffer:
                 None
     
     
-    def start_sniffing(self):
+    def start_sniffing(self, sender: EventSender):
+        self.siddhi_sender = sender
         print(f"Capturando pacotes da interface {self.iface} na porta {self.dport} e registrando em {self.log_file}...")
         try:
             sniff(iface=self.iface, filter=f"tcp and port {self.dport}", prn=self.packet_callback)
