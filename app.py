@@ -32,8 +32,61 @@ async def main():
         #             #  "having msgCount >= 50 " +
         #              "insert into outputStream;"
 
-        query_string="define stream cseEventStream (sniff_ts string, srcAddr string, dstAddr string, mqtt_messagetype int, mqtt_messagelength long, mqtt_flag_qos int, mqtt_flag_passwd int); " + \
-            "@info(name = 'query1') from cseEventStream select srcAddr,dstAddr insert into outputStream;"
+        
+        query_string="""
+        define stream cseEventStream (sniff_ts string, srcAddr string, dstAddr string, mqtt_messagetype int, mqtt_messagelength long, mqtt_flag_qos int, mqtt_flag_passwd int);          
+            @info(name = 'AllEventsWindow')
+            from InputStream#window.timeBatch(500 milliseconds)
+            select srcAddr, dstAddr
+            insert all events into TempStream;
+
+            @info(name = 'CountEvents')
+            from InputStream#window.timeBatch(500 milliseconds)
+            select count() as eventCount
+            insert into CountStream;
+
+            @info(name = 'query1')
+            from TempStream as A join CountStream[eventCount >= 50] as C
+            within 500 milliseconds
+            select A.srcAddr
+            insert into AlertStream;
+
+        """
+        # @info(name = 'query1')
+        #     from cseEventStream#window.time(500 milliseconds)
+        #     select sniff_ts, srcAddr, dstAddr, mqtt_messagetype, mqtt_messagelength, mqtt_flag_passwd, count() as eventCount
+        #     group by srcAddr
+        #     having eventCount >= 50
+        #     insert into TempWindow;
+
+        # @info(name = 'query1')
+        #     from cseEventStream#window.time(500 milliseconds)
+        #     select sniff_ts, srcAddr, dstAddr, mqtt_messagetype, mqtt_messagelength, mqtt_flag_passwd, count() as eventCount
+        #     group by srcAddr
+        #     having eventCount >= 50
+        #     insert into TempWindow;
+
+
+        #  @info(name = 'query1') 
+        #     from TempWindow
+        #     select sniff_ts, srcAddr, dstAddr, mqtt_messagetype, mqtt_messagelength, mqtt_flag_passwd, count() as eventCount
+        #     insert into CountStream;
+
+        #  @info(name = 'Alerta')
+        #     from CountStream[eventCount > 50] as C
+        #     TempWindow as A join
+        #     select A.sniff_ts, A.srcAddr, A.dstAddr, A.mqtt_messagetype, A.mqtt_messagelength, A.mqtt_flag_passwd        
+        #     insert into outputStream;
+        
+        #select 
+            
+                    # "define stream InputStream (sniff_ts string, srcAddr string, dstAddr string, mqtt_messagetype int, mqtt_messagelength long, mqtt_flag_qos int, mqtt_flag_passwd int); " +
+                    # "@info(name = 'query1') " +
+                    # "from (InputStream)#window.timeBatch(500 millis) " +
+                    # "select count(*) as messageCount " +
+                    # "insert into outputStream;"
+
+                    
 
         # query_string="define window cseEventWindow (sniff_ts string, srcAddr string, dstAddr string, mqtt_messagetype int, mqtt_messagelength long, mqtt_flag_qos int, mqtt_flag_passwd int ) time(500) output all events; " +
         #             "@info(name = 'query0') " +
@@ -49,7 +102,7 @@ async def main():
 
     siddhi_manager = SiddhiManager()
     siddhi_app = str(mqtt_stream) + " " + str(query)
-    print(siddhi_app)
+
     siddhi_runtime = siddhi_manager.createSiddhiAppRuntime(siddhi_app)
 
     # Define os nomes das colunas na ordem usada na stream
@@ -57,8 +110,11 @@ async def main():
 
     # Adiciona callback com os nomes reais
     # siddhi_runtime.addCallback(query.name, QueryCallbackImpl(column_names=column_names))
-    siddhi_runtime.addCallback(query.name, QueryCallbackImpl())
+    #siddhi_runtime.addCallback(query.name, QueryCallbackImpl())
+    siddhi_runtime.addCallback('query1', QueryCallbackImpl())
+
     input_handler = siddhi_runtime.getInputHandler(mqtt_stream.stream_name)
+
 
     sender = EventSender(input_handler, mqtt_stream)
     siddhi_runtime.start()

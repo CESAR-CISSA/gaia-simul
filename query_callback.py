@@ -59,10 +59,19 @@ def write_output_analisys(filename, data):
 class QueryCallbackImpl(QueryCallback):
     def receive(self, timestamp, inEvents, outEvents):
         
-        print('Testando')
-        print('QueryCallback')
+        print('Event In')
+        if inEvents is not None:
+            for event in inEvents:
+                raw_data = event.getData()
+                np_array = np.array(raw_data)  # converte para numpy.ndarray
+                print(f"Evento em NumPy: {np_array}")
 
-        for event in inEvents:
-            raw_data = event.getData()
-            np_array = np.array(raw_data)  # converte para numpy.ndarray
-            print(f"Evento em NumPy: {np_array}")
+        print('Event Out')
+
+        if outEvents is not None:
+            for event in outEvents:
+                raw_data = event.getData()
+                np_array = np.array(raw_data)  # converte para numpy.ndarray
+                print(f"Evento em NumPy: {np_array}")
+        else:
+            pass

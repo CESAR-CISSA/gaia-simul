@@ -86,15 +86,12 @@ class MQTTSniffer:
             try:
                 mqtt_length = packet[MQTT].length
                 
-                
                 try:
                     mqtt_passwd = packet[MQTT].passwordflag
                 except:
                     mqtt_passwd = 0
 
                 self.siddhi_sender.send_event([str(tcp_time), str(sipaddr), str(dipaddr), mqtt_type, mqtt_length, mqtt_qos,  mqtt_passwd])
-
-                print('passou do SIDHI')
 
                 # if mqtt_type == 3:
                 #data = [mqtt_type, mqtt_length, mqtt_passwd]
