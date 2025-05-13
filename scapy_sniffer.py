@@ -62,6 +62,7 @@ class MQTTSniffer:
         self.iface = iface
         self.dport = dport
         self.sport = sport
+        #self.sender = sender
 
         log_array = []
         self.log_array = log_array
@@ -91,16 +92,18 @@ class MQTTSniffer:
                 except:
                     mqtt_passwd = 0
 
-            
+                self.siddhi_sender.send_event([str(tcp_time), str(sipaddr), str(dipaddr), mqtt_type, mqtt_length, mqtt_qos,  mqtt_passwd])
+
+                print('passou do SIDHI')
 
                 # if mqtt_type == 3:
-                data = [mqtt_type, mqtt_length, mqtt_passwd]
-                model_pred, is_attack = analisys_packet(data, model, IP_ATTACKER, scaler, sipaddr)
+                #data = [mqtt_type, mqtt_length, mqtt_passwd]
+                #model_pred, is_attack = analisys_packet(data, model, IP_ATTACKER, scaler, sipaddr)
 
                 #data_output = [sipaddr, dipaddr, mqtt_type, mqtt_length, mqtt_qos, model_pred, is_attack]
 
-                data_output = [model_pred, is_attack]
-                write_output_analisys(FILE_OUTPUT_CSV, data_output)
+                #data_output = [model_pred, is_attack]
+                #write_output_analisys(FILE_OUTPUT_CSV, data_output)
 
                 #self.log_array.append((tcp_time, sipaddr, dipaddr, mqtt_type, mqtt_length, mqtt_qos))
 
@@ -108,13 +111,20 @@ class MQTTSniffer:
                 #logging.info(f"{tcp_time}\t {sipaddr}\t {dipaddr}\t {mqtt_type}\t {mqtt_length}\t {mqtt_qos}")
             except AttributeError:
                 None
+
+           
+                
     
     
     def start_sniffing(self, sender: EventSender):
         self.siddhi_sender = sender
+
+        print(sender)
         print(f"Capturando pacotes da interface {self.iface} na porta {self.dport} e registrando em {self.log_file}...")
         try:
+            print('entra')
             sniff(iface=self.iface, filter=f"tcp and port {self.dport}", prn=self.packet_callback)
+            print('testeando')
         except KeyboardInterrupt:
             print("\nCaptura interrompida.")
             logging.info("Captura interrompida pelo usuário.")

@@ -29,13 +29,13 @@ def analisys_packet(data, model, ip_attacker, scaler, srcAddr):
         data = pd.DataFrame([data], columns=['mqtt_messagetype', 'mqtt_messagelength', 'mqtt_flag_passwd'])
         
 
-        print(data)
+        #print(data)
         out_cep_scaled = scaler.transform(data)
 
-        print(out_cep_scaled)
+        #print(out_cep_scaled)
         model_pred = model.predict(out_cep_scaled)
 
-        print(model_pred)
+        #   print(model_pred)
         
         model_pred = [1 if p == -1 else 0 for p in model_pred]
 
@@ -58,6 +58,10 @@ def write_output_analisys(filename, data):
 
 class QueryCallbackImpl(QueryCallback):
     def receive(self, timestamp, inEvents, outEvents):
+        
+        print('Testando')
+        print('QueryCallback')
+
         for event in inEvents:
             raw_data = event.getData()
             np_array = np.array(raw_data)  # converte para numpy.ndarray

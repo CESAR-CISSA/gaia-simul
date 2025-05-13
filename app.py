@@ -31,16 +31,20 @@ async def main():
         #             #  "group by srcAddr " +
         #             #  "having msgCount >= 50 " +
         #              "insert into outputStream;"
-        query_string="define window cseEventWindow (sniff_ts string, srcAddr string, dstAddr string, mqtt_messagetype int, mqtt_messagelength long, mqtt_flag_qos int, mqtt_flag_passwd int ) time(500) output all events; " +
-                    "@info(name = 'query0') " +
-                    "from cseEventStream " +
-                    "insert into cseEventWindow; " +
-                    "@info(name = 'query1') " +
-                    "from cseEventWindow[mqtt_messagetype == 2]" + 
-                    "select sniff_ts, srcAddr, dstAddr, mqtt_messagetype, mqtt_messagelength, mqtt_flag_qos, mqtt_flag_passwd, count() as msgCount " +
-                     "group by srcAddr " +
-                     "having msgCount >= 50 " +
-                     "insert into outputStream;"
+
+        query_string="define stream cseEventStream (sniff_ts string, srcAddr string, dstAddr string, mqtt_messagetype int, mqtt_messagelength long, mqtt_flag_qos int, mqtt_flag_passwd int); " + \
+            "@info(name = 'query1') from cseEventStream select srcAddr,dstAddr insert into outputStream;"
+
+        # query_string="define window cseEventWindow (sniff_ts string, srcAddr string, dstAddr string, mqtt_messagetype int, mqtt_messagelength long, mqtt_flag_qos int, mqtt_flag_passwd int ) time(500) output all events; " +
+        #             "@info(name = 'query0') " +
+        #             "from cseEventStream " +
+        #             "insert into cseEventWindow; " +
+        #             "@info(name = 'query1') " +
+        #             "from cseEventWindow" + 
+        #             "select sniff_ts, srcAddr, dstAddr, mqtt_messagetype, mqtt_messagelength, mqtt_flag_qos, mqtt_flag_passwd, count() as msgCount " +
+        #              #"group by srcAddr " +
+        #              #"having msgCount >= 50 " +
+        #              "insert into outputStream;"
     )
 
     siddhi_manager = SiddhiManager()
@@ -70,7 +74,6 @@ async def main():
 
     sniffer = MQTTSniffer(log_file, iface, sport, dport) 
     sniffer.start_sniffing(sender)
-
 
     # await sender.send_event_from_csv("./data/eventos.csv") # when not containerized
     # await sender.send_event_from_csv("./app/data/eventos.csv") # when containerized
