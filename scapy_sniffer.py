@@ -70,7 +70,7 @@ class MQTTSniffer:
         logging.info("Timestamp\t Source IP\t Destination IP\t MQTT Type\t MQTT Length\t MQTT QoS")
 
     def packet_callback(self, packet):
-        if IP in packet and TCP in packet and (packet[TCP].sport == sport or packet[TCP].dport == dport) and MQTT in packet:
+        if IP in packet and TCP in packet and (packet[TCP].sport == self.sport or packet[TCP].dport == self.dport) and MQTT in packet:
             sipaddr = packet[IP].src
             dipaddr = packet[IP].dst
             tcp_time = str(packet[TCP].time)
@@ -110,9 +110,9 @@ class MQTTSniffer:
     
     
     def start_sniffing(self):
-        print(f"Capturando pacotes da interface {iface} na porta {dport} e registrando em {log_file}...")
+        print(f"Capturando pacotes da interface {self.iface} na porta {self.dport} e registrando em {self.log_file}...")
         try:
-            sniff(iface=self.iface, filter=f"tcp and port {dport}", prn=self.packet_callback)
+            sniff(iface=self.iface, filter=f"tcp and port {self.dport}", prn=self.packet_callback)
         except KeyboardInterrupt:
             print("\nCaptura interrompida.")
             logging.info("Captura interrompida pelo usuário.")
