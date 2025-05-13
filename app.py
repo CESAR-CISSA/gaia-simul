@@ -17,6 +17,7 @@ async def main():
     mqtt_stream.add_mqtt_attribute("mqtt_messagetype", SiddhiType.INT)
     mqtt_stream.add_mqtt_attribute("mqtt_messagelength", SiddhiType.LONG)
     mqtt_stream.add_mqtt_attribute("mqtt_flag_qos", SiddhiType.INT)
+    mqtt_stream.add_mqtt_attribute("mqtt_flag_passwd", SiddhiType.INT)
 
     # Define a query Siddhi
     query = SiddhiQuery(
@@ -30,13 +31,13 @@ async def main():
         #             #  "group by srcAddr " +
         #             #  "having msgCount >= 50 " +
         #              "insert into outputStream;"
-        query_string="define window cseEventWindow (sniff_ts string, srcAddr string, dstAddr string, mqtt_messagetype int, mqtt_messagelength long, mqtt_flag_qos int ) time(500) output all events; " +
+        query_string="define window cseEventWindow (sniff_ts string, srcAddr string, dstAddr string, mqtt_messagetype int, mqtt_messagelength long, mqtt_flag_qos int, mqtt_flag_passwd int ) time(500) output all events; " +
                     "@info(name = 'query0') " +
                     "from cseEventStream " +
                     "insert into cseEventWindow; " +
                     "@info(name = 'query1') " +
                     "from cseEventWindow[mqtt_messagetype == 2]" + 
-                    "select sniff_ts, srcAddr, dstAddr, mqtt_messagetype, mqtt_messagelength, mqtt_flag_qos, count() as msgCount " +
+                    "select sniff_ts, srcAddr, dstAddr, mqtt_messagetype, mqtt_messagelength, mqtt_flag_qos, mqtt_flag_passwd, count() as msgCount " +
                      "group by srcAddr " +
                      "having msgCount >= 50 " +
                      "insert into outputStream;"

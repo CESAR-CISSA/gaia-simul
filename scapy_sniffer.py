@@ -1,92 +1,137 @@
 from scapy.all import sniff, IP, TCP, Raw
 from scapy.contrib.mqtt import MQTT
-from sender import EventSender
-from datetime import datetime
+from net_helper import NetworkInterfaceManager
+import numpy as np
 import logging
+import time
+import pandas as pd
 
-CONTROL_PACKET_TYPE = {
-    1: 'CONNECT',
-    2: 'CONNACK',
-    3: 'PUBLISH',
-    4: 'PUBACK',
-    5: 'PUBREC',
-    6: 'PUBREL',
-    7: 'PUBCOMP',
-    8: 'SUBSCRIBE',
-    9: 'SUBACK',
-    10: 'UNSUBSCRIBE',
-    11: 'UNSUBACK',
-    12: 'PINGREQ',
-    13: 'PINGRESP',
-    14: 'DISCONNECT',
-    15: 'AUTH'  # Added in v5.0
-}
+import csv
+import pickle
+
+IP_ATTACKER = '172.20.0.6'
+FILE_OUTPUT_CSV = 'output_cep_analysis.csv'
+MODEL_FILE_PATH = 'model/model.pickle'
+
+def load_model_and_scaler(path):
+
+    with open(path, 'rb') as handle:
+        pickle_obj = pickle.load(handle)
+
+    return pickle_obj['model'], pickle_obj['scaler']
 
 
-QOS_LEVEL = {
-    0: 'At most once delivery',
-    1: 'At least once delivery',
-    2: 'Exactly once delivery'
-}
+model, scaler = load_model_and_scaler('model/model.pickle')
 
+def analisys_packet(data, model, ip_attacker, scaler, srcAddr):
+        
+
+
+        data = pd.DataFrame([data], columns=['mqtt_messagetype', 'mqtt_messagelength', 'mqtt_flag_passwd'])
+        
+
+        print(data)
+        out_cep_scaled = scaler.transform(data)
+
+        print(out_cep_scaled)
+        model_pred = model.predict(out_cep_scaled)
+
+        print(model_pred)
+        
+        model_pred = [1 if p == -1 else 0 for p in model_pred]
+
+        if ip_attacker == srcAddr:
+            is_attack = 1
+        else:
+            is_attack = 0
+
+        return model_pred[0], is_attack
+
+def write_output_analisys(filename, data):
+        try:
+            with open(filename, 'a', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(data) 
+        except Exception as e:
+            print(f"Erro ao adicionar dados ao arquivo CSV: {e}")
 
 class MQTTSniffer:
-    def __init__(self, log_file="captura_scapy.log", interface="br-a506fe339fbf"):
+    def __init__(self, log_file, iface, sport, dport):
         self.log_file = log_file
-        #logging.basicConfig(filename=self.log_file, level=logging.INFO, format='[%(asctime)s] - %(message)s')
+        self.iface = iface
+        self.dport = dport
+        self.sport = sport
+
+        log_array = []
+        self.log_array = log_array
+
         logging.basicConfig(filename=self.log_file, level=logging.INFO, format='%(message)s')
         logging.info("Iniciando o MQTTSniffer...")
         logging.info("Timestamp\t Source IP\t Destination IP\t MQTT Type\t MQTT Length\t MQTT QoS")
-    
 
     def packet_callback(self, packet):
-        if IP in packet and TCP in packet and (packet[TCP].dport == 1883 or packet[TCP].sport == 1883) and MQTT in packet:
-            #timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
-
-            '''
-            # Obtém o endereço IP de origem e destino
-            # Obtém o timestamp do pacote TCP
-            '''
+        if IP in packet and TCP in packet and (packet[TCP].sport == sport or packet[TCP].dport == dport) and MQTT in packet:
             sipaddr = packet[IP].src
             dipaddr = packet[IP].dst
             tcp_time = str(packet[TCP].time)
+            mqtt_type = packet[MQTT].type
+            mqtt_qos = packet[MQTT].QOS
+
             
-            '''
-            # Informações sobre o pacote MQTT
-            # Obtém o tipo do pacote MQTT
-            # Obtém o tamanho do pacote MQTT
-            # Obtém o QoS do pacote MQTT
-            '''
-            mqtt_type = packet[MQTT].type # Obtém o tipo do pacote MQTT                  
-            
-            # Ignora os pacotes sem length (tipos 2, 8, 9, 12, 13 e 14)
-            if mqtt_type not in [8,9,12,13,14]:
+
+            #exclude_types = [2, 8, 9, 12, 13, 14]  # Exclude these MQTT types
+
+            try:
                 mqtt_length = packet[MQTT].length
-                mqtt_qos = packet[MQTT].QOS
+                
+                
+                try:
+                    mqtt_passwd = packet[MQTT].passwordflag
+                except:
+                    mqtt_passwd = 0
 
-                event_data = [tcp_time, sipaddr, dipaddr, mqtt_type, mqtt_length, mqtt_qos]
-                self.siddhi_sender.send_event(event_data)
+            
 
-                # print(f"{tcp_time}\t {sipaddr}\t {dipaddr}\t {mqtt_type}\t {mqtt_length}\t {mqtt_qos}")
-                # logging.info(f"{tcp_time}\t {sipaddr}\t {dipaddr}\t {mqtt_type}\t {mqtt_length}\t {mqtt_qos}")
+                # if mqtt_type == 3:
+                data = [mqtt_type, mqtt_length, mqtt_passwd]
+                model_pred, is_attack = analisys_packet(data, model, IP_ATTACKER, scaler, sipaddr)
+
+                #data_output = [sipaddr, dipaddr, mqtt_type, mqtt_length, mqtt_qos, model_pred, is_attack]
+
+                data_output = [model_pred, is_attack]
+                write_output_analisys(FILE_OUTPUT_CSV, data_output)
+
+                #self.log_array.append((tcp_time, sipaddr, dipaddr, mqtt_type, mqtt_length, mqtt_qos))
+
+                #print(f"{tcp_time}\t {sipaddr}\t {dipaddr}\t {mqtt_type}\t {mqtt_length}\t {mqtt_qos}")
+                #logging.info(f"{tcp_time}\t {sipaddr}\t {dipaddr}\t {mqtt_type}\t {mqtt_length}\t {mqtt_qos}")
+            except AttributeError:
+                None
     
-
-    def start_sniffing(self, iface, sender: EventSender):
-        self.siddhi_sender = sender
-        print(f"Capturando pacotes da interface {iface} na porta 1883 e registrando em {self.log_file}...")
+    
+    def start_sniffing(self):
+        print(f"Capturando pacotes da interface {iface} na porta {dport} e registrando em {log_file}...")
         try:
-            sniff(iface=iface, filter="tcp and port 1883", prn=self.packet_callback)
+            sniff(iface=self.iface, filter=f"tcp and port {dport}", prn=self.packet_callback)
         except KeyboardInterrupt:
             print("\nCaptura interrompida.")
             logging.info("Captura interrompida pelo usuário.")
+        finally:
+            nparray = np.array(self.log_array)
+            logging.info("Finalizando a captura.")
 
 
-# def main(iface):
-#     sniffer = MQTTSniffer(interface=iface)
-#     sniffer.start_sniffing(iface)
+# def main(log_file, iface, sport, dport):
+#     sniffer = MQTTSniffer(log_file, iface, sport, dport)
+#     sniffer.start_sniffing()
 
 
 # if __name__ == "__main__":
-#     # iface = "br-f07280c660ff"  
-#     iface = "br-a506fe339fbf" 
-#     main(iface)
+#     manager = NetworkInterfaceManager()
+#     selected_interface = manager.choose_interface_cli()
+
+#     log_file = "captura_scapy.log"
+#     iface = selected_interface
+#     sport = 1883
+#     dport = 1883
+#     main(log_file, iface, sport, dport)
